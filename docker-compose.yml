@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14
+    container_name: job-aggregator-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: job_aggregator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - job-aggregator-network
+
+  # Backend Go API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: job-aggregator-backend
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=job_aggregator
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    networks:
+      - job-aggregator-network
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: job-aggregator-frontend
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - job-aggregator-network
+
+networks:
+  job-aggregator-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
